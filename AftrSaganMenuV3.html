@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=no">
+    <title>Aftr Sagan Menu</title>
+
+    <!-- === PWA / APLIKASI STANDALONE TAGS === -->
+    <meta name="theme-color" content="#000000">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Buku Menu">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3135/3135673.png">
+
+    <!-- Library NoSleep.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/nosleep/0.12.0/NoSleep.min.js"></script>
+
+    <style>
+        /* === CORE STYLES === */
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #000; font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif; overflow: hidden; user-select: none; -webkit-touch-callout: none; touch-action: none; color: white;}
+        * { box-sizing: border-box; }
+
+        /* === SLIDER === */
+        #slider-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 1; overflow: hidden; }
+        .slide { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; transform: scale(1.08); filter: blur(20px); transition: opacity 1s ease, transform 1s ease, filter 1s ease; pointer-events: none; z-index: 1; -webkit-user-drag: none; transform-origin: center; }
+        .slide.active { opacity: 1; transform: scale(1) translate(0px, 0px); filter: blur(0px); pointer-events: auto; z-index: 2; }
+        .slide.previous { opacity: 0; transform: scale(0.95); filter: blur(15px); z-index: 1; }
+
+        /* === OVERLAYS === */
+        .closed-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 5; opacity: 0; pointer-events: none; transition: opacity 0.5s ease; }
+        .closed-overlay.active { opacity: 1; }
+        .closed-content { background: rgba(30,30,30,0.7); padding: 35px; border-radius: 24px; text-align: center; border: 1px solid rgba(255,255,255,0.15); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); box-shadow: 0 20px 40px rgba(0,0,0,0.5); transform: scale(0.9); transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .closed-overlay.active .closed-content { transform: scale(1); }
+        .closed-content h2 { margin: 0 0 10px 0; font-size: 26px; font-weight: 600; letter-spacing: 0.5px;}
+        .closed-content p { margin: 5px 0; font-size: 16px; color: #e1e1e1; line-height: 1.4; }
+        .closed-content p i { color: #aaa; font-size: 14px; font-weight: 300;}
+
+        .closed-corner { position: absolute; top: 40px; left: 40px; z-index: 5; opacity: 0; pointer-events: none; transition: opacity 0.5s ease; }
+        .closed-corner.active { opacity: 1; }
+        .closed-content-corner { background: rgba(30,30,30,0.7); padding: 20px 25px; border-radius: 18px; border: 1px solid rgba(255,255,255,0.15); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); box-shadow: 0 15px 30px rgba(0,0,0,0.5); max-width: 340px; transform: scale(0.9); transform-origin: top left; transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .closed-corner.active .closed-content-corner { transform: scale(1); }
+        .closed-content-corner h2 { margin: 0 0 8px 0; font-size: 18px; font-weight: 600;}
+        .closed-content-corner p { margin: 4px 0; font-size: 14px; color: #e1e1e1; line-height: 1.4; }
+        .closed-content-corner p i { color: #aaa; font-size: 12px; font-weight: 300;}
+
+        /* === RIBBON MARQUEE === */
+        .ribbon { position: fixed; left: 0; width: 100%; backdrop-filter: blur(10px); color: white; font-weight: 500; padding: 12px 0; z-index: 15; white-space: nowrap; overflow: hidden; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3);}
+        .ribbon.top { top: 0; }
+        .ribbon.bottom { bottom: 0; }
+        .ribbon span { display: inline-block; padding-left: 100%; animation: marquee linear infinite; font-size: 15px; letter-spacing: 0.5px;}
+        @keyframes marquee { 0% { transform: translate(0, 0); } 100% { transform: translate(-100%, 0); } }
+
+        /* === UI BUTTONS === */
+        .ui-btn { position: fixed; background: rgba(30,30,30,0.6); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 10px 18px; border-radius: 12px; font-size: 13px; font-weight: 500; cursor: pointer; z-index: 20; backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); transition: all 0.2s ease;}
+        .ui-btn:active { background: rgba(255,255,255,0.2); transform: scale(0.95);}
+
+        #startBtn { top: 20px; right: 20px; }
+        #settingsBtn { top: 75px; right: 20px; background: rgba(0, 122, 255, 0.6); }
+        #exitFsBtn { top: 20px; right: 20px; background: rgba(255, 59, 48, 0.6); display: none; }
+
+        :fullscreen #startBtn, :-webkit-full-screen #startBtn { display: none !important; }
+        :fullscreen #settingsBtn, :-webkit-full-screen #settingsBtn { display: none !important; }
+        :fullscreen #exitFsBtn, :-webkit-full-screen #exitFsBtn { display: block !important; }
+
+        .hint-text { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); color: rgba(255,255,255,0.5); background: rgba(30,30,30,0.5); padding: 8px 18px; border-radius: 30px; font-size: 12px; font-weight: 400; z-index: 10; pointer-events: none; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); transition: all 0.3s ease; }
+        .paused-state .hint-text { color: rgba(255, 255, 255, 0.9); background: rgba(0, 122, 255, 0.6); }
+
+        /* === DINAMIS POSISI RIBBON MENGHINDARI OVERLAP === */
+        body.has-ribbon-top #slider-container { top: 44px; height: calc(100% - 44px); }
+        body.has-ribbon-bottom #slider-container { top: 0; height: calc(100% - 44px); }
+        body.has-ribbon-bottom .hint-text { bottom: 64px; }
+        body.has-ribbon-top #startBtn, body.has-ribbon-top #exitFsBtn { top: 64px; }
+        body.has-ribbon-top #settingsBtn { top: 119px; }
+
+        @media (orientation: portrait) {
+            .hint-text { bottom: 25px; }
+            .closed-corner { top: 20px; left: 20px; }
+            .closed-content-corner { max-width: 280px; }
+            body.has-ribbon-bottom .hint-text { bottom: 69px; }
+        }
+
+        /* ========================================================
+           macOS STYLE UI (MODALS)
+        ======================================================== */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 100; display: none; align-items: center; justify-content: center; pointer-events: auto; touch-action: auto; transition: opacity 0.3s; opacity: 0; }
+        .modal-overlay.active { display: flex; opacity: 1; }
+
+        /* PIN Modal (Apple Auth Style) */
+        .mac-auth-dialog { background: rgba(40, 40, 40, 0.85); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); padding: 25px; border-radius: 16px; width: 320px; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 25px 50px rgba(0,0,0,0.5); text-align: center; transform: scale(0.95); transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);}
+        .modal-overlay.active .mac-auth-dialog { transform: scale(1); }
+        .mac-auth-icon { font-size: 40px; margin-bottom: 10px; }
+        .mac-auth-dialog h3 { margin: 0 0 5px 0; font-size: 17px; font-weight: 600; border: none; color: white; padding: 0;}
+        .mac-auth-dialog p { font-size: 13px; color: #aaa; margin: 0 0 20px 0; }
+
+        .mac-auth-dialog input { width: 100%; box-sizing: border-box; text-align: center; font-size: 24px; letter-spacing: 8px; font-weight: bold; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: white; margin-bottom: 20px; outline: none;}
+        .mac-auth-dialog input:focus { border-color: #007AFF; box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.3); }
+        .mac-auth-actions { display: flex; gap: 10px; }
+
+        /* MODAL ALERT / ERROR ala macOS */
+        .mac-error-dialog { background: rgba(40, 40, 40, 0.85); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); padding: 25px; border-radius: 16px; width: 320px; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 25px 50px rgba(0,0,0,0.5); text-align: center; transform: scale(0.95); transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);}
+        .modal-overlay.active .mac-error-dialog { transform: scale(1); }
+        .mac-error-dialog h3 { margin: 0 0 5px 0; font-size: 16px; font-weight: 600; color: white; }
+        .mac-error-dialog p { font-size: 13px; color: #ccc; margin: 0 0 20px 0; line-height: 1.4;}
+
+        /* Buttons macOS */
+        .mac-btn { flex: 1; padding: 10px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; outline: none; transition: background 0.2s;}
+        .mac-btn-primary { background: #007AFF; color: white; }
+        .mac-btn-primary:active { background: #005ecb; }
+        .mac-btn-secondary { background: rgba(255,255,255,0.15); color: white; }
+        .mac-btn-secondary:active { background: rgba(255,255,255,0.25); }
+
+        /* Settings Modal (macOS System Settings Style) */
+        .mac-settings-window { background: rgba(30, 30, 30, 0.7); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); border-radius: 14px; width: 800px; max-width: 95%; height: 550px; max-height: 90vh; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 30px 60px rgba(0,0,0,0.6); display: flex; flex-direction: column; overflow: hidden; transform: scale(0.95); transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+        .modal-overlay.active .mac-settings-window { transform: scale(1); }
+
+        /* Titlebar / Traffic Lights */
+        .mac-titlebar { display: flex; align-items: center; padding: 12px 16px; background: rgba(255,255,255,0.03); border-bottom: 1px solid rgba(255,255,255,0.05); -webkit-app-region: drag; }
+        .traffic-lights { display: flex; gap: 8px; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; cursor: pointer; }
+        .dot.red { background: #ff5f56; } .dot.red:hover { background: #ff3b30; }
+        .dot.yellow { background: #ffbd2e; cursor: default;}
+        .dot.green { background: #27c93f; cursor: default;}
+        .mac-title { flex: 1; text-align: center; font-size: 13px; font-weight: 600; color: #ddd; margin-right: 50px; }
+
+        /* Settings Layout Layout */
+        .mac-settings-body { display: flex; flex: 1; overflow: hidden; }
+
+        /* Sidebar */
+        .mac-sidebar { width: 220px; background: rgba(0,0,0,0.2); padding: 15px 10px; border-right: 1px solid rgba(255,255,255,0.1); overflow-y: auto; }
+        .sidebar-item { padding: 8px 12px; border-radius: 6px; font-size: 14px; color: #ccc; cursor: pointer; display: flex; align-items: center; gap: 10px; margin-bottom: 4px; transition: all 0.2s; }
+        .sidebar-item:hover { background: rgba(255,255,255,0.05); color: white;}
+        .sidebar-item.active { background: #007AFF; color: white; font-weight: 500; }
+
+        /* Content Area */
+        .mac-content { flex: 1; padding: 0; display: flex; flex-direction: column; background: rgba(255,255,255,0.02);}
+        .settings-section { padding: 30px; display: none; overflow-y: auto; flex: 1; }
+        .settings-section.active { display: block; animation: fadeIn 0.3s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Form Controls in macOS style */
+        .settings-section h2 { margin: 0 0 20px 0; font-size: 22px; font-weight: 600; }
+        .mac-panel { background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 15px 20px; margin-bottom: 20px; }
+        .form-row { display: flex; align-items: center; margin-bottom: 12px; gap: 15px;}
+        .form-row:last-child { margin-bottom: 0; }
+        .form-row label { flex: 1; font-size: 13px; color: #ddd; }
+        .form-row input[type="text"], .form-row input[type="time"], .form-row input[type="number"], .form-row select { width: 60%; padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.4); color: white; font-size: 13px; outline: none; transition: border 0.2s; }
+        .form-row input:focus, .form-row select:focus { border-color: #007AFF; }
+        .info-text { font-size: 11px; color: #888; display: block; margin-top: 5px; margin-left: 40%;}
+
+        /* Menu Items List */
+        .mac-menu-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 15px; margin-bottom: 15px; position: relative;}
+        .mac-menu-card input, .mac-menu-card select { width: 100%; margin-top: 5px; margin-bottom: 10px; padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15); background: rgba(0,0,0,0.4); color: white; font-size: 13px; outline: none;}
+        .mac-menu-card label { font-size: 12px; color: #aaa; }
+        .mac-menu-actions { display: flex; gap: 8px; }
+        .mac-menu-actions button { padding: 6px 12px; border-radius: 6px; font-size: 12px; border: none; cursor: pointer; color: white; }
+        .btn-move { background: rgba(255,255,255,0.15); } .btn-move:hover { background: rgba(255,255,255,0.25); }
+        .btn-del { background: #ff3b30; margin-left: auto;} .btn-del:hover { background: #d32f2f; }
+
+        /* Save Footer */
+        .mac-footer { padding: 15px 30px; background: rgba(0,0,0,0.2); border-top: 1px solid rgba(255,255,255,0.05); text-align: right; }
+        .mac-footer button { margin-left: 10px; padding: 8px 20px; font-size: 13px; }
+
+        /* === APP SHORTCUT GRID === */
+        .app-shortcut-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 15px; }
+        .app-shortcut-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 14px 8px; border-radius: 16px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); cursor: pointer; user-select: none; -webkit-user-select: none; transition: background 0.15s ease, transform 0.15s ease; }
+        .app-shortcut-tile:active { background: rgba(255,255,255,0.15); transform: scale(0.94); }
+        .app-shortcut-tile img { width: 48px; height: 48px; border-radius: 12px; object-fit: cover; -webkit-user-drag: none; pointer-events: none; }
+        .app-shortcut-emoji { font-size: 34px; line-height: 48px; height: 48px; pointer-events: none; }
+        .app-shortcut-label { font-size: 12px; color: #ddd; text-align: center; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
+        .app-shortcut-add { border-style: dashed; border-color: rgba(255,255,255,0.25); background: transparent; }
+        .app-shortcut-plus { font-size: 30px; line-height: 48px; height: 48px; color: rgba(255,255,255,0.5); pointer-events: none; }
+
+        /* App Shortcut Add/Edit Dialog */
+        .mac-shortcut-dialog { background: rgba(40, 40, 40, 0.9); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); padding: 25px; border-radius: 16px; width: 360px; max-width: 90%; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 25px 50px rgba(0,0,0,0.5); text-align: left; transform: scale(0.95); transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);}
+        .modal-overlay.active .mac-shortcut-dialog { transform: scale(1); }
+        .mac-shortcut-dialog h3 { margin: 0; font-size: 17px; font-weight: 600; color: white; text-align: center; }
+        .mac-shortcut-dialog .form-row label { flex: none; width: 38%; }
+
+        /* Toast Notification */
+        .app-toast { position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%) translateY(20px); background: rgba(30,30,30,0.9); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); color: white; padding: 12px 22px; border-radius: 30px; font-size: 13px; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 10px 25px rgba(0,0,0,0.4); z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.3s ease, transform 0.3s ease; }
+        .app-toast.active { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.3); }
+    </style>
+</head>
+<body>
+
+<!-- Default UI Buttons -->
+<button id="startBtn" class="ui-btn">Fullscreen Mode</button>
+<button id="settingsBtn" class="ui-btn">⚙️</button>
+<button id="exitFsBtn" class="ui-btn">✖️</button>
+
+<!-- Ribbon -->
+<div id="ribbonBar" class="ribbon"><span></span></div>
+
+<!-- Main Slider -->
+<div id="slider-container">
+    <!-- Slides will be injected here via JS -->
+</div>
+
+<div class="hint-text" id="hint">Geser / cubit layar untuk zoom</div>
+
+<!-- macOS PIN Modal -->
+<div id="pinModal" class="modal-overlay">
+    <div class="mac-auth-dialog">
+        <div class="mac-auth-icon">🔒</div>
+        <h3>Otentikasi Sistem</h3>
+        <p>Sistem mencoba memodifikasi pengaturan. Masukkan PIN untuk mengizinkan.</p>
+        <input type="password" id="pinInput" placeholder="••••" inputmode="numeric" maxlength="10" autocomplete="off">
+        <div class="mac-auth-actions">
+            <button class="mac-btn mac-btn-secondary" id="cancelPinBtn">Batal</button>
+            <button class="mac-btn mac-btn-primary" id="submitPinBtn">Buka Kunci</button>
+        </div>
+    </div>
+</div>
+
+<!-- macOS Error Modal (Pengganti Alert) -->
+<div id="errorModal" class="modal-overlay" style="z-index: 105;">
+    <div class="mac-error-dialog">
+        <div class="mac-auth-icon">⚠️</div>
+        <h3>Otentikasi Gagal</h3>
+        <p>PIN yang Anda masukkan salah. Silakan coba lagi.</p>
+        <div class="mac-auth-actions" style="justify-content: center;">
+            <button class="mac-btn mac-btn-primary" id="closeErrorBtn" style="width: 100%;">OK</button>
+        </div>
+    </div>
+</div>
+
+<!-- App Shortcut Add/Edit Modal (layered above Settings) -->
+<div id="appFormModal" class="modal-overlay" style="z-index: 110;">
+    <div class="mac-shortcut-dialog">
+        <h3 id="appFormTitle">Tambah Shortcut</h3>
+        <div class="form-row" style="margin-top: 15px;">
+            <label>Nama</label>
+            <input type="text" id="appFormLabel" placeholder="Contoh: WhatsApp" style="width: 60%;">
+        </div>
+        <div class="form-row">
+            <label>Package Name</label>
+            <input type="text" id="appFormPackage" placeholder="com.whatsapp" style="width: 60%;">
+        </div>
+        <span class="info-text" style="margin-top:-8px; margin-bottom:12px; margin-left:0; display:block; text-align:left;">Cari di Pengaturan &gt; Aplikasi di tablet, atau cari "package name [nama aplikasi]".</span>
+        <div class="form-row">
+            <label>Sumber Ikon</label>
+            <select id="appFormIconType" style="width: 60%;">
+                <option value="emoji">Emoji</option>
+                <option value="drive">Link Google Drive</option>
+            </select>
+        </div>
+        <div class="form-row" id="appFormIconValueRow">
+            <label id="appFormIconValueLabel">Emoji</label>
+            <input type="text" id="appFormIconValue" placeholder="📱" style="width: 60%;">
+        </div>
+        <div class="mac-auth-actions" style="margin-top: 20px;">
+            <button class="mac-btn mac-btn-secondary" id="cancelShortcutBtn">Batal</button>
+            <button class="mac-btn mac-btn-primary" id="saveShortcutBtn">Simpan</button>
+        </div>
+        <button class="mac-btn" id="deleteShortcutBtn" style="width: 100%; margin-top: 10px; background: rgba(255,59,48,0.85); color: white; display: none;">🗑️ Hapus Shortcut</button>
+    </div>
+</div>
+
+<!-- macOS Settings Modal -->
+<div id="settingsModal" class="modal-overlay">
+    <div class="mac-settings-window">
+        <!-- Window Title Bar -->
+        <div class="mac-titlebar">
+            <div class="traffic-lights">
+                <div class="dot red" id="closeSettingsBtn" title="Tutup Pengaturan"></div>
+                <div class="dot yellow"></div>
+                <div class="dot green"></div>
+            </div>
+            <div class="mac-title">Pengaturan Sistem Kiosk</div>
+        </div>
+
+        <div class="mac-settings-body">
+            <!-- Sidebar -->
+            <div class="mac-sidebar">
+                <div class="sidebar-item active" data-target="sec-general">⚙️ Umum & Pita</div>
+                <div class="sidebar-item" data-target="sec-overlay">⏱️ Waktu & Teks Overlay</div>
+                <div class="sidebar-item" data-target="sec-menus">🖼️ Daftar Menu</div>
+                <div class="sidebar-item" data-target="sec-apps">🧩 Aplikasi</div>
+            </div>
+
+            <!-- Content Area -->
+            <div class="mac-content">
+
+                <!-- Section: General & Ribbon -->
+                <div id="sec-general" class="settings-section active">
+                    <h2>Umum & Pita Pemberitahuan</h2>
+                    <div class="mac-panel">
+                        <div class="form-row">
+                            <label>PIN Keamanan Kiosk</label>
+                            <input type="text" id="setPin" placeholder="Contoh: 3939">
+                        </div>
+                        <span class="info-text" style="margin-top:-5px; margin-bottom:10px;">PIN untuk keluar fullscreen dan buka pengaturan.</span>
+
+                        <!-- TAMBAHAN: Durasi Slide -->
+                        <div class="form-row">
+                            <label>Durasi Slide Tiap Gambar</label>
+                            <div style="display: flex; gap: 10px; width: 60%; align-items: center;">
+                                <input type="number" id="setSlideDuration" min="5" max="300" style="width: 80px;">
+                                <span style="color:#aaa; font-size:12px;">detik</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mac-panel">
+                        <div class="form-row">
+                            <label>Pemberitahuan Berjalan (Ribbon)</label>
+                            <select id="setRibbonPos">
+                                <option value="none">Dimatikan</option>
+                                <option value="top">Aktif - Tampil di Atas</option>
+                                <option value="bottom">Aktif - Tampil di Bawah</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <label>Teks Pemberitahuan</label>
+                            <input type="text" id="setRibbonText" placeholder="Teks berjalan...">
+                        </div>
+                        <div class="form-row">
+                            <label>Warna Latar Ribbon</label>
+                            <input type="color" id="setRibbonBgColor" style="width: 40px; padding: 0; height: 35px; border:none; border-radius: 4px; cursor: pointer;">
+                        </div>
+                        <div class="form-row">
+                            <label>Kecepatan Animasi</label>
+                            <div style="display: flex; gap: 10px; width: 60%; align-items: center;">
+                                <input type="number" id="setRibbonSpeed" min="1" max="100" style="width: 60px;">
+                                <span style="color:#aaa; font-size:12px;">detik</span>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <label>Jadwal Otomatis</label>
+                            <select id="setRibbonAuto">
+                                <option value="false">Tidak (Selalu Tampil)</option>
+                                <option value="true">Ya (Gunakan Jadwal)</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <label>Waktu Tampil Ribbon</label>
+                            <div style="display: flex; gap: 10px; width: 60%;">
+                                <input type="time" id="setRibbonStart" style="width: 100%;">
+                                <span style="line-height: 35px; color:#aaa;">s/d</span>
+                                <input type="time" id="setRibbonEnd" style="width: 100%;">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section: Overlay -->
+                <div id="sec-overlay" class="settings-section">
+                    <h2>Waktu & Teks Overlay</h2>
+                    <div class="mac-panel">
+                        <div class="form-row">
+                            <label>Otomatis Tutup Pada Jam</label>
+                            <div style="display: flex; gap: 10px; width: 60%;">
+                                <input type="time" id="setStartTime" style="width: 100%;">
+                                <span style="line-height: 35px; color:#aaa;">s/d</span>
+                                <input type="time" id="setEndTime" style="width: 100%;">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mac-panel">
+                        <div class="form-row">
+                            <label>Teks Judul</label>
+                            <div style="display: flex; gap: 10px; width: 60%;">
+                                <input type="text" id="setOvTitle" style="flex:1;" placeholder="TUTUP / CLOSED">
+                                <input type="color" id="setOvTitleColor" style="width: 40px; padding: 0; height: 35px; border:none; border-radius: 4px; cursor: pointer;">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <label>Teks Utama (Baris 1)</label>
+                            <input type="text" id="setOvText1" placeholder="Makanan berat tutup...">
+                        </div>
+                        <div class="form-row" style="margin-bottom:0;">
+                            <label>Terjemahan (Baris 2)</label>
+                            <input type="text" id="setOvText2" placeholder="Heavy meals are closed...">
+                        </div>
+                        <span class="info-text">Gunakan <b>{time}</b> pada baris teks agar diisi dengan Jam Buka.</span>
+                    </div>
+                </div>
+
+                <!-- Section: Menus -->
+                <div id="sec-menus" class="settings-section">
+                    <h2>Daftar Gambar Menu</h2>
+                    <div id="menuListSettings">
+                        <!-- Injected via JS -->
+                    </div>
+                    <button class="mac-btn mac-btn-secondary" id="addMenuBtn" style="width: 100%; border: 1px dashed rgba(255,255,255,0.3); padding: 15px;">+ Tambah Menu Baru</button>
+                </div>
+
+                <!-- Section: App Shortcuts -->
+                <div id="sec-apps" class="settings-section">
+                    <h2>Shortcut Aplikasi</h2>
+                    <span class="info-text" style="margin-left:0; margin-bottom:15px; display:block;">Tekan singkat untuk membuka aplikasi. Tekan &amp; tahan ikon untuk edit/hapus. Aplikasi dibuka lewat Fully Kiosk Browser tanpa keluar dari mode kiosk.</span>
+                    <div class="mac-panel">
+                        <div id="appShortcutGrid" class="app-shortcut-grid"></div>
+                    </div>
+                </div>
+
+                <!-- Footer Save Button -->
+                <div class="mac-footer">
+                    <span id="saveStatus" style="color: #27c93f; font-size: 12px; margin-right: 15px; opacity: 0; transition: opacity 0.3s;">Tersimpan! ✓</span>
+                    <button class="mac-btn mac-btn-primary" id="saveSettingsBtn">Terapkan Perubahan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.addEventListener('contextmenu', e => e.preventDefault());
+    const noSleep = new NoSleep();
+
+    // ==========================================
+    // 1. STATE MANAGEMENT (LOCAL STORAGE)
+    // ==========================================
+    const defaultData = {
+        pin: "3939",
+        slideDuration: 45, // default durasi 45 detik
+        closeTime: { start: "00:30", end: "09:30" },
+        ribbon: {
+            pos: "none",
+            text: "Selamat Datang! Ada diskon 10% hari ini.",
+            bgColor: "#007AFF",
+            speed: "15",
+            autoSchedule: "false",
+            startTime: "08:00",
+            endTime: "22:00"
+        },
+        overlaySettings: {
+            title: "BELUM TERSEDIA / NOT YET AVAILABLE",
+            titleColor: "#ff4757",
+            text1: "Makanan berat & snack tutup. Buka kembali pukul {time}.",
+            text2: "Heavy meals & snacks are closed. We will reopen at {time}."
+        },
+        menus: [
+            { id: "m1", link: "https://drive.google.com/file/d/1FSv3Oo21B1Jx81Fnxt17JTHcyACtceH4/view", overlay: "none" },
+            { id: "m2", link: "https://drive.google.com/file/d/15GoVFnw7jcm7indLBx1kGQ9IN-EnZQHa/view", overlay: "corner" },
+            { id: "m3", link: "https://drive.google.com/file/d/13DMYmWU7WL8o8lI6dzm9sxbVhcsaEBcO/view", overlay: "center" }
+        ],
+        appShortcuts: []
+    };
+
+    function loadData() {
+        const saved = localStorage.getItem('kioskData');
+        if (saved) {
+            let parsed = JSON.parse(saved);
+            if (!parsed.overlaySettings) parsed.overlaySettings = defaultData.overlaySettings;
+            if (!parsed.slideDuration) parsed.slideDuration = defaultData.slideDuration;
+            if (!parsed.appShortcuts) parsed.appShortcuts = [];
+            if (!parsed.ribbon.bgColor) {
+                parsed.ribbon.bgColor = defaultData.ribbon.bgColor;
+                parsed.ribbon.speed = defaultData.ribbon.speed;
+                parsed.ribbon.autoSchedule = defaultData.ribbon.autoSchedule;
+                parsed.ribbon.startTime = defaultData.ribbon.startTime;
+                parsed.ribbon.endTime = defaultData.ribbon.endTime;
+            }
+            return parsed;
+        }
+        return defaultData;
+    }
+
+    function saveData(data) { localStorage.setItem('kioskData', JSON.stringify(data)); }
+    let appData = loadData();
+
+    function parseDriveLink(url) {
+        const match = url.match(/\/d\/(.+?)\//) || url.match(/id=(.+?)(&|$)/);
+        if (match && match[1]) return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w2500`;
+        return url;
+    }
+
+    // ==========================================
+    // 2. RENDER ENGINE
+    // ==========================================
+    function renderKiosk() {
+        const container = document.getElementById('slider-container');
+        const rb = document.getElementById('ribbonBar');
+
+        container.innerHTML = '';
+        document.body.classList.remove('has-ribbon-top', 'has-ribbon-bottom');
+
+        rb.style.backgroundColor = (appData.ribbon.bgColor || '#007AFF') + 'E6';
+        rb.querySelector('span').style.animationDuration = `${appData.ribbon.speed || 15}s`;
+
+        const ovTitle = appData.overlaySettings.title;
+        const ovColor = appData.overlaySettings.titleColor;
+        const ovText1 = appData.overlaySettings.text1.replace(/{time}/g, appData.closeTime.end);
+        const ovText2 = appData.overlaySettings.text2.replace(/{time}/g, appData.closeTime.end);
+
+        appData.menus.forEach((menu, index) => {
+            const img = document.createElement('img');
+            img.className = `slide ${index === 0 ? 'active' : ''}`;
+            img.src = parseDriveLink(menu.link);
+            img.alt = `Menu ${index + 1}`;
+            container.appendChild(img);
+
+            if (menu.overlay !== 'none') {
+                const ov = document.createElement('div');
+                ov.className = menu.overlay === 'center' ? 'closed-overlay' : 'closed-corner';
+                ov.id = `overlay-${index}`;
+
+                const box = document.createElement('div');
+                box.className = menu.overlay === 'center' ? 'closed-content' : 'closed-content-corner';
+                box.innerHTML = `
+                    <h2 style="color: ${ovColor} !important;">${ovTitle}</h2>
+                    <p>${ovText1}</p>
+                    <p><i>${ovText2}</i></p>
+                `;
+                ov.appendChild(box);
+                container.appendChild(ov);
+            }
+        });
+
+        totalSlides = appData.menus.length;
+        currentSlide = 0;
+        slides = document.querySelectorAll('.slide');
+        checkOverlayTime();
+        startSlide();
+    }
+
+    // ==========================================
+    // 3. OVERLAY & RIBBON TIME LOGIC
+    // ==========================================
+    function timeToMinutes(timeStr) {
+        const [h, m] = timeStr.split(':').map(Number);
+        return (h * 60) + m;
+    }
+
+    function checkOverlayTime() {
+        const now = new Date();
+        const currentMins = now.getHours() * 60 + now.getMinutes();
+
+        const startMins = timeToMinutes(appData.closeTime.start);
+        const endMins = timeToMinutes(appData.closeTime.end);
+
+        let isClosed = false;
+        if (startMins > endMins) {
+            isClosed = currentMins >= startMins || currentMins < endMins;
+        } else {
+            isClosed = currentMins >= startMins && currentMins < endMins;
+        }
+
+        appData.menus.forEach((menu, index) => {
+            if (menu.overlay !== 'none') {
+                const el = document.getElementById(`overlay-${index}`);
+                if (el) {
+                    if (index === currentSlide && isClosed) el.classList.add('active');
+                    else el.classList.remove('active');
+                }
+            }
+        });
+
+        const rb = document.getElementById('ribbonBar');
+        let showRibbon = false;
+
+        if (appData.ribbon.pos !== 'none') {
+            if (appData.ribbon.autoSchedule === 'true') {
+                const rStart = timeToMinutes(appData.ribbon.startTime || "00:00");
+                const rEnd = timeToMinutes(appData.ribbon.endTime || "23:59");
+                if (rStart > rEnd) {
+                    showRibbon = currentMins >= rStart || currentMins < rEnd;
+                } else {
+                    showRibbon = currentMins >= rStart && currentMins < rEnd;
+                }
+            } else {
+                showRibbon = true;
+            }
+        }
+
+        document.body.classList.remove('has-ribbon-top', 'has-ribbon-bottom');
+        if (showRibbon) {
+            rb.className = `ribbon ${appData.ribbon.pos}`;
+            rb.querySelector('span').innerText = appData.ribbon.text;
+            rb.style.display = 'block';
+            document.body.classList.add(`has-ribbon-${appData.ribbon.pos}`);
+        } else {
+            rb.style.display = 'none';
+        }
+    }
+    setInterval(checkOverlayTime, 60000);
+
+    // ==========================================
+    // 4. SLIDER & ZOOM LOGIC
+    // ==========================================
+    let currentSlide = 0, slides = [], totalSlides = 0;
+    let slideInterval = null, idleTimer = null, isInteracting = false;
+    let currentScale = 1, currentTranslateX = 0, currentTranslateY = 0;
+    let initialDistance = 0, lastTouchX = 0, lastTouchY = 0, touchStartX = 0, isSwiping = false;
+
+    function goToSlide(index) {
+        if(totalSlides === 0) return;
+        const prevIndex = currentSlide;
+        if (index < 0) currentSlide = totalSlides - 1;
+        else if (index >= totalSlides) currentSlide = 0;
+        else currentSlide = index;
+
+        currentScale = 1; currentTranslateX = 0; currentTranslateY = 0;
+        slides.forEach((slide, i) => {
+            slide.style.transform = ''; slide.style.transition = '';
+            slide.classList.remove('active', 'previous');
+            if (i === currentSlide) slide.classList.add('active');
+            else if (i === prevIndex) slide.classList.add('previous');
+        });
+        checkOverlayTime();
+    }
+
+    function startSlide() {
+        if (slideInterval) clearInterval(slideInterval);
+        // Durasi dinamis berdasarkan pengaturan (dikonversi dari detik ke milidetik)
+        const durationMs = (appData.slideDuration || 45) * 1000;
+        slideInterval = setInterval(() => { if (!isInteracting) goToSlide(currentSlide + 1); }, durationMs);
+        document.getElementById('hint').innerText = "Geser / cubit layar untuk zoom";
+    }
+    function pauseSlide() {
+        if (slideInterval) clearInterval(slideInterval);
+        document.getElementById('hint').innerText = "Layar ditahan";
+    }
+
+    const sliderEl = document.getElementById('slider-container');
+    sliderEl.addEventListener('touchstart', (evt) => {
+        isInteracting = true; isSwiping = false;
+        if (evt.touches.length === 2) initialDistance = Math.hypot(evt.touches[0].clientX - evt.touches[1].clientX, evt.touches[0].clientY - evt.touches[1].clientY);
+        else if (evt.touches.length === 1) { touchStartX = evt.touches[0].clientX; lastTouchX = evt.touches[0].clientX; lastTouchY = evt.touches[0].clientY; }
+        if (idleTimer) clearTimeout(idleTimer);
+        pauseSlide();
+    }, {passive: false});
+
+    sliderEl.addEventListener('touchmove', (evt) => {
+        if (!isInteracting) return;
+        const activeSlide = slides[currentSlide];
+        if (evt.touches.length === 2) {
+            evt.preventDefault(); isSwiping = false;
+            const currentDistance = Math.hypot(evt.touches[0].clientX - evt.touches[1].clientX, evt.touches[0].clientY - evt.touches[1].clientY);
+            currentScale = Math.max(1, Math.min(currentScale * (currentDistance / initialDistance), 6));
+            initialDistance = currentDistance;
+            if (activeSlide) { activeSlide.style.transition = 'none'; activeSlide.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`; }
+        } else if (evt.touches.length === 1 && currentScale > 1) {
+            evt.preventDefault(); isSwiping = false;
+            currentTranslateX += (evt.touches[0].clientX - lastTouchX);
+            currentTranslateY += (evt.touches[0].clientY - lastTouchY);
+            lastTouchX = evt.touches[0].clientX; lastTouchY = evt.touches[0].clientY;
+            if (activeSlide) { activeSlide.style.transition = 'none'; activeSlide.style.transform = `translate(${currentTranslateX}px, ${currentTranslateY}px) scale(${currentScale})`; }
+        } else if (evt.touches.length === 1 && currentScale === 1) {
+            if (Math.abs(evt.touches[0].clientX - touchStartX) > 30) isSwiping = true;
+        }
+    }, {passive: false});
+
+    sliderEl.addEventListener('touchend', (evt) => {
+        if (evt.touches.length > 0) return;
+        if (isInteracting && isSwiping && currentScale === 1) {
+            const dist = touchStartX - (evt.changedTouches ? evt.changedTouches[0].clientX : evt.clientX);
+            if (dist > 40) goToSlide(currentSlide + 1); else if (dist < -40) goToSlide(currentSlide - 1);
+        }
+        if (currentScale < 1.1) {
+            currentScale = 1; currentTranslateX = 0; currentTranslateY = 0;
+            if (slides[currentSlide]) { slides[currentSlide].style.transition = 'transform 0.3s ease'; slides[currentSlide].style.transform = ''; }
+        }
+        isInteracting = false; isSwiping = false;
+        if (idleTimer) clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+            if (!isInteracting) {
+                if (currentScale > 1) {
+                    currentScale = 1; currentTranslateX = 0; currentTranslateY = 0;
+                    if (slides[currentSlide]) { slides[currentSlide].style.transition = 'transform 0.5s ease'; slides[currentSlide].style.transform = ''; }
+                }
+                startSlide();
+            }
+        }, 2000);
+    });
+
+    // ==========================================
+    // 5. FULLSCREEN, PIN, AND NATIVE APP LOGIC
+    // ==========================================
+    const startBtn = document.getElementById('startBtn');
+    const settingsBtn = document.getElementById('settingsBtn');
+    const exitFsBtn = document.getElementById('exitFsBtn');
+    const pinModal = document.getElementById('pinModal');
+    const pinInput = document.getElementById('pinInput');
+    const settingsModal = document.getElementById('settingsModal');
+
+    let pendingAction = "";
+
+    startBtn.addEventListener('click', () => {
+        noSleep.enable();
+        const docEl = document.documentElement;
+        if (docEl.requestFullscreen) docEl.requestFullscreen();
+        else if (docEl.webkitRequestFullscreen) docEl.webkitRequestFullscreen();
+
+        if (window.AndroidApp) {
+            window.AndroidApp.startKioskMode();
+        }
+    });
+
+    exitFsBtn.addEventListener('click', () => { pendingAction = "exit"; showPinModal(); });
+    settingsBtn.addEventListener('click', () => { pendingAction = "settings"; showPinModal(); });
+
+    function showPinModal() {
+        pinInput.value = '';
+        pinModal.classList.add('active');
+        pinInput.focus();
+    }
+
+    document.getElementById('cancelPinBtn').addEventListener('click', () => {
+        pinModal.classList.remove('active');
+        pendingAction = "";
+    });
+
+    document.getElementById('closeErrorBtn').addEventListener('click', () => {
+        document.getElementById('errorModal').classList.remove('active');
+        pinInput.focus();
+    });
+
+    document.getElementById('submitPinBtn').addEventListener('click', () => {
+        if (pinInput.value === appData.pin) {
+            pinModal.classList.remove('active');
+            if (pendingAction === "exit") {
+
+                if (window.AndroidApp) {
+                    window.AndroidApp.stopKioskMode();
+                }
+
+                if (document.exitFullscreen) document.exitFullscreen();
+                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+                noSleep.disable();
+            } else if (pendingAction === "settings") {
+                openSettingsModal();
+            }
+            pendingAction = "";
+        } else {
+            document.getElementById('errorModal').classList.add('active');
+            pinInput.value = '';
+        }
+    });
+
+    ['fullscreenchange', 'webkitfullscreenchange'].forEach(evt => {
+        document.addEventListener(evt, () => {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) noSleep.disable();
+        });
+    });
+
+    // --- TABS LOGIC FOR macOS SIDEBAR ---
+    const sidebarItems = document.querySelectorAll('.sidebar-item');
+    const settingsSections = document.querySelectorAll('.settings-section');
+
+    sidebarItems.forEach(item => {
+        item.addEventListener('click', () => {
+            sidebarItems.forEach(i => i.classList.remove('active'));
+            settingsSections.forEach(s => s.classList.remove('active'));
+            item.classList.add('active');
+            document.getElementById(item.getAttribute('data-target')).classList.add('active');
+        });
+    });
+
+    function openSettingsModal() {
+        document.getElementById('setPin').value = appData.pin;
+        document.getElementById('setSlideDuration').value = appData.slideDuration || 45;
+
+        document.getElementById('setStartTime').value = appData.closeTime.start;
+        document.getElementById('setEndTime').value = appData.closeTime.end;
+
+        document.getElementById('setOvTitle').value = appData.overlaySettings.title;
+        document.getElementById('setOvTitleColor').value = appData.overlaySettings.titleColor;
+        document.getElementById('setOvText1').value = appData.overlaySettings.text1;
+        document.getElementById('setOvText2').value = appData.overlaySettings.text2;
+
+        document.getElementById('setRibbonPos').value = appData.ribbon.pos;
+        document.getElementById('setRibbonText').value = appData.ribbon.text;
+        document.getElementById('setRibbonBgColor').value = appData.ribbon.bgColor || "#007AFF";
+        document.getElementById('setRibbonSpeed').value = appData.ribbon.speed || 15;
+        document.getElementById('setRibbonAuto').value = appData.ribbon.autoSchedule || "false";
+        document.getElementById('setRibbonStart').value = appData.ribbon.startTime || "08:00";
+        document.getElementById('setRibbonEnd').value = appData.ribbon.endTime || "22:00";
+
+        renderSettingsMenuList();
+        renderAppShortcuts();
+        settingsModal.classList.add('active');
+    }
+
+    document.getElementById('closeSettingsBtn').addEventListener('click', () => {
+        settingsModal.classList.remove('active');
+    });
+
+    function renderSettingsMenuList() {
+        const menuListSettings = document.getElementById('menuListSettings');
+        menuListSettings.innerHTML = '';
+        appData.menus.forEach((m, idx) => {
+            const div = document.createElement('div');
+            div.className = 'mac-menu-card';
+            div.innerHTML = `
+                <label>Link Gambar GDrive (Menu ${idx + 1}):</label>
+                <input type="text" value="${m.link}" id="link-${idx}">
+                <label>Posisi Overlay Tutup:</label>
+                <select id="ov-${idx}">
+                    <option value="none" ${m.overlay==='none'?'selected':''}>Tidak Ada Overlay</option>
+                    <option value="corner" ${m.overlay==='corner'?'selected':''}>Pojok Kiri Atas (Kecil)</option>
+                    <option value="center" ${m.overlay==='center'?'selected':''}>Tengah Layar (Gelap)</option>
+                </select>
+                <div class="mac-menu-actions">
+                    <button class="btn-move" onclick="moveMenu(${idx}, -1)">▲ Naik</button>
+                    <button class="btn-move" onclick="moveMenu(${idx}, 1)">▼ Turun</button>
+                    <button class="btn-del" onclick="deleteMenu(${idx})">🗑️ Hapus</button>
+                </div>
+            `;
+            menuListSettings.appendChild(div);
+        });
+    }
+
+    window.moveMenu = function(index, dir) {
+        if (index + dir < 0 || index + dir >= appData.menus.length) return;
+        syncMenuInputs();
+        const temp = appData.menus[index];
+        appData.menus[index] = appData.menus[index + dir];
+        appData.menus[index + dir] = temp;
+        renderSettingsMenuList();
+    };
+
+    window.deleteMenu = function(index) {
+        if(appData.menus.length <= 1) return alert("Sistem membutuhkan setidaknya 1 menu.");
+        syncMenuInputs();
+        appData.menus.splice(index, 1);
+        renderSettingsMenuList();
+    };
+
+    document.getElementById('addMenuBtn').addEventListener('click', () => {
+        syncMenuInputs();
+        appData.menus.push({ link: "", overlay: "none" });
+        renderSettingsMenuList();
+    });
+
+    function syncMenuInputs() {
+        appData.menus.forEach((m, idx) => {
+            const linkIn = document.getElementById(`link-${idx}`);
+            const ovIn = document.getElementById(`ov-${idx}`);
+            if(linkIn) m.link = linkIn.value;
+            if(ovIn) m.overlay = ovIn.value;
+        });
+    }
+
+    // Simpan & Terapkan Pengaturan
+    document.getElementById('saveSettingsBtn').addEventListener('click', () => {
+        syncMenuInputs();
+        appData.menus = appData.menus.filter(m => m.link.trim() !== "");
+        if(appData.menus.length === 0) {
+            alert("Harus ada minimal 1 menu dengan link yang valid!"); return;
+        }
+
+        appData.pin = document.getElementById('setPin').value || "3939";
+        appData.slideDuration = parseInt(document.getElementById('setSlideDuration').value) || 45;
+
+        appData.ribbon.pos = document.getElementById('setRibbonPos').value;
+        appData.ribbon.text = document.getElementById('setRibbonText').value;
+        appData.ribbon.bgColor = document.getElementById('setRibbonBgColor').value;
+        appData.ribbon.speed = document.getElementById('setRibbonSpeed').value;
+        appData.ribbon.autoSchedule = document.getElementById('setRibbonAuto').value;
+        appData.ribbon.startTime = document.getElementById('setRibbonStart').value;
+        appData.ribbon.endTime = document.getElementById('setRibbonEnd').value;
+
+        appData.closeTime.start = document.getElementById('setStartTime').value;
+        appData.closeTime.end = document.getElementById('setEndTime').value;
+        appData.overlaySettings.title = document.getElementById('setOvTitle').value;
+        appData.overlaySettings.titleColor = document.getElementById('setOvTitleColor').value;
+        appData.overlaySettings.text1 = document.getElementById('setOvText1').value;
+        appData.overlaySettings.text2 = document.getElementById('setOvText2').value;
+
+        saveData(appData);
+        renderKiosk();
+
+        const status = document.getElementById('saveStatus');
+        status.style.opacity = '1';
+        setTimeout(() => { status.style.opacity = '0'; }, 2000);
+
+        setTimeout(() => { settingsModal.classList.remove('active'); }, 600);
+    });
+
+    // ==========================================
+    // 6. APP SHORTCUTS (FULLY KIOSK INTEGRATION)
+    // ==========================================
+    let editingShortcutIndex = null;
+
+    function attachLongPress(el, onLongPress, onClick) {
+        let pressTimer = null;
+        let didLongPress = false;
+        const start = () => {
+            didLongPress = false;
+            pressTimer = setTimeout(() => { didLongPress = true; onLongPress(); }, 550);
+        };
+        const cancel = () => clearTimeout(pressTimer);
+        const end = () => { clearTimeout(pressTimer); if (!didLongPress) onClick(); };
+        el.addEventListener('touchstart', start, { passive: true });
+        el.addEventListener('touchend', end);
+        el.addEventListener('touchmove', cancel);
+        el.addEventListener('touchcancel', cancel);
+        el.addEventListener('mousedown', start);
+        el.addEventListener('mouseup', end);
+        el.addEventListener('mouseleave', cancel);
+    }
+
+    function showToast(msg) {
+        let toast = document.getElementById('appToast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'appToast';
+            toast.className = 'app-toast';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = msg;
+        toast.classList.add('active');
+        clearTimeout(showToast._t);
+        showToast._t = setTimeout(() => toast.classList.remove('active'), 2500);
+    }
+
+    function launchApp(pkg) {
+        if (!pkg) return;
+        if (window.fully && typeof fully.startApplication === 'function') {
+            fully.startApplication(pkg);
+        } else {
+            showToast('Fitur ini hanya berjalan di dalam Fully Kiosk Browser.');
+        }
+    }
+
+    function renderAppShortcuts() {
+        const grid = document.getElementById('appShortcutGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        appData.appShortcuts.forEach((item, idx) => {
+            const tile = document.createElement('div');
+            tile.className = 'app-shortcut-tile';
+            const iconHtml = (item.icon && item.icon.type === 'drive' && item.icon.value)
+                ? `<img src="${parseDriveLink(item.icon.value)}" alt="${item.label}">`
+                : `<span class="app-shortcut-emoji">${(item.icon && item.icon.value) || '📱'}</span>`;
+            tile.innerHTML = `${iconHtml}<div class="app-shortcut-label">${item.label || 'Tanpa Nama'}</div>`;
+            attachLongPress(tile, () => openAppForm(idx), () => launchApp(item.packageName));
+            grid.appendChild(tile);
+        });
+
+        const addTile = document.createElement('div');
+        addTile.className = 'app-shortcut-tile app-shortcut-add';
+        addTile.innerHTML = `<span class="app-shortcut-plus">+</span><div class="app-shortcut-label">Tambah</div>`;
+        addTile.addEventListener('click', () => openAppForm(null));
+        grid.appendChild(addTile);
+    }
+
+    function toggleIconTypeUI() {
+        const type = document.getElementById('appFormIconType').value;
+        const label = document.getElementById('appFormIconValueLabel');
+        const input = document.getElementById('appFormIconValue');
+        if (type === 'drive') {
+            label.innerText = 'Link Google Drive';
+            input.placeholder = 'https://drive.google.com/file/d/.../view';
+        } else {
+            label.innerText = 'Emoji';
+            input.placeholder = '📱';
+        }
+    }
+
+    function openAppForm(index) {
+        editingShortcutIndex = index;
+        const isEdit = index !== null;
+        const item = isEdit ? appData.appShortcuts[index] : { label: '', packageName: '', icon: { type: 'emoji', value: '' } };
+
+        document.getElementById('appFormTitle').textContent = isEdit ? 'Edit Shortcut' : 'Tambah Shortcut';
+        document.getElementById('appFormLabel').value = item.label || '';
+        document.getElementById('appFormPackage').value = item.packageName || '';
+        document.getElementById('appFormIconType').value = (item.icon && item.icon.type) || 'emoji';
+        document.getElementById('appFormIconValue').value = (item.icon && item.icon.value) || '';
+        document.getElementById('deleteShortcutBtn').style.display = isEdit ? 'block' : 'none';
+
+        toggleIconTypeUI();
+        document.getElementById('appFormModal').classList.add('active');
+    }
+
+    function closeAppForm() {
+        document.getElementById('appFormModal').classList.remove('active');
+        editingShortcutIndex = null;
+    }
+
+    document.getElementById('appFormIconType').addEventListener('change', toggleIconTypeUI);
+    document.getElementById('cancelShortcutBtn').addEventListener('click', closeAppForm);
+
+    document.getElementById('saveShortcutBtn').addEventListener('click', () => {
+        const label = document.getElementById('appFormLabel').value.trim();
+        const packageName = document.getElementById('appFormPackage').value.trim();
+        const iconType = document.getElementById('appFormIconType').value;
+        const iconValue = document.getElementById('appFormIconValue').value.trim();
+
+        if (!label || !packageName) {
+            alert('Nama dan Package Name wajib diisi.');
+            return;
+        }
+
+        const newItem = { label, packageName, icon: { type: iconType, value: iconValue } };
+        if (editingShortcutIndex !== null) {
+            appData.appShortcuts[editingShortcutIndex] = newItem;
+        } else {
+            appData.appShortcuts.push(newItem);
+        }
+
+        saveData(appData);
+        renderAppShortcuts();
+        closeAppForm();
+    });
+
+    document.getElementById('deleteShortcutBtn').addEventListener('click', () => {
+        if (editingShortcutIndex !== null) {
+            appData.appShortcuts.splice(editingShortcutIndex, 1);
+            saveData(appData);
+            renderAppShortcuts();
+        }
+        closeAppForm();
+    });
+
+    // Initialize Kiosk
+    renderKiosk();
+
+</script>
+</body>
+</html>
