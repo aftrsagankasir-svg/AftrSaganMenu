@@ -44,6 +44,9 @@
         .closed-content-corner p { margin: 4px 0; font-size: 14px; color: #e1e1e1; line-height: 1.4; }
         .closed-content-corner p i { color: #aaa; font-size: 12px; font-weight: 300;}
 
+        /* Peek: sembunyikan sementara overlay tutup saat layar disentuh/zoom */
+        .closed-overlay.active.peeking, .closed-corner.active.peeking { opacity: 0; transition: opacity 0.2s ease; }
+
         /* === RIBBON MARQUEE === */
         .ribbon { position: fixed; left: 0; width: 100%; backdrop-filter: blur(10px); color: white; font-weight: 500; padding: 12px 0; z-index: 15; white-space: nowrap; overflow: hidden; display: none; box-shadow: 0 4px 15px rgba(0,0,0,0.3);}
         .ribbon.top { top: 0; }
@@ -101,7 +104,7 @@
         .mac-error-dialog { background: rgba(40, 40, 40, 0.85); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px); padding: 25px; border-radius: 16px; width: 320px; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 25px 50px rgba(0,0,0,0.5); text-align: center; transform: scale(0.95); transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);}
         .modal-overlay.active .mac-error-dialog { transform: scale(1); }
         .mac-error-dialog h3 { margin: 0 0 5px 0; font-size: 16px; font-weight: 600; color: white; }
-        .mac-error-dialog p { font-size: 13px; color: #ccc; margin: 0 0 20px 0; line-height: 1.4;}
+        .mac-error-dialog p { font-size: 13px; color: #ccc; margin: 0 0 20px 0; line-height: 1.4; white-space: pre-line; text-align: left; }
 
         /* Buttons macOS */
         .mac-btn { flex: 1; padding: 10px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; outline: none; transition: background 0.2s;}
@@ -219,12 +222,12 @@
     </div>
 </div>
 
-<!-- macOS Error Modal (Pengganti Alert) -->
+<!-- macOS Error/Alert Modal (Pengganti Alert) -->
 <div id="errorModal" class="modal-overlay" style="z-index: 105;">
     <div class="mac-error-dialog">
-        <div class="mac-auth-icon">⚠️</div>
-        <h3>Otentikasi Gagal</h3>
-        <p>PIN yang Anda masukkan salah. Silakan coba lagi.</p>
+        <div class="mac-auth-icon" id="errorIcon">⚠️</div>
+        <h3 id="errorTitle">Otentikasi Gagal</h3>
+        <p id="errorMessage">PIN yang Anda masukkan salah. Silakan coba lagi.</p>
         <div class="mac-auth-actions" style="justify-content: center;">
             <button class="mac-btn mac-btn-primary" id="closeErrorBtn" style="width: 100%;">OK</button>
         </div>
@@ -397,6 +400,7 @@
                 <div id="sec-apps" class="settings-section">
                     <h2>Shortcut Aplikasi</h2>
                     <span class="info-text" style="margin-left:0; margin-bottom:15px; display:block;">Tekan singkat untuk membuka aplikasi. Tekan &amp; tahan ikon untuk edit/hapus. Aplikasi dibuka lewat Fully Kiosk Browser tanpa keluar dari mode kiosk.</span>
+                    <button class="mac-btn mac-btn-secondary" id="checkFullyBtn" style="margin-bottom: 15px;">🔧 Cek Status Fully Interface</button>
                     <div class="mac-panel">
                         <div id="appShortcutGrid" class="app-shortcut-grid"></div>
                     </div>
@@ -621,9 +625,16 @@
         document.getElementById('hint').innerText = "Layar ditahan";
     }
 
+    function setOverlayPeek(active) {
+        document.querySelectorAll('.closed-overlay, .closed-corner').forEach(el => {
+            el.classList.toggle('peeking', active);
+        });
+    }
+
     const sliderEl = document.getElementById('slider-container');
     sliderEl.addEventListener('touchstart', (evt) => {
         isInteracting = true; isSwiping = false;
+        setOverlayPeek(true);
         if (evt.touches.length === 2) initialDistance = Math.hypot(evt.touches[0].clientX - evt.touches[1].clientX, evt.touches[0].clientY - evt.touches[1].clientY);
         else if (evt.touches.length === 1) { touchStartX = evt.touches[0].clientX; lastTouchX = evt.touches[0].clientX; lastTouchY = evt.touches[0].clientY; }
         if (idleTimer) clearTimeout(idleTimer);
@@ -661,6 +672,7 @@
             if (slides[currentSlide]) { slides[currentSlide].style.transition = 'transform 0.3s ease'; slides[currentSlide].style.transform = ''; }
         }
         isInteracting = false; isSwiping = false;
+        setOverlayPeek(false);
         if (idleTimer) clearTimeout(idleTimer);
         idleTimer = setTimeout(() => {
             if (!isInteracting) {
@@ -710,9 +722,20 @@
         pendingAction = "";
     });
 
+    let alertCallback = null;
+    function showMacAlert(title, message, icon = '⚠️', callback = null) {
+        document.getElementById('errorIcon').textContent = icon;
+        document.getElementById('errorTitle').textContent = title;
+        document.getElementById('errorMessage').textContent = message;
+        alertCallback = callback;
+        document.getElementById('errorModal').classList.add('active');
+    }
+
     document.getElementById('closeErrorBtn').addEventListener('click', () => {
         document.getElementById('errorModal').classList.remove('active');
-        pinInput.focus();
+        const cb = alertCallback;
+        alertCallback = null;
+        if (typeof cb === 'function') cb();
     });
 
     document.getElementById('submitPinBtn').addEventListener('click', () => {
@@ -732,7 +755,7 @@
             }
             pendingAction = "";
         } else {
-            document.getElementById('errorModal').classList.add('active');
+            showMacAlert('Otentikasi Gagal', 'PIN yang Anda masukkan salah. Silakan coba lagi.', '⚠️', () => pinInput.focus());
             pinInput.value = '';
         }
     });
@@ -923,6 +946,28 @@
         }
     }
 
+    function checkFullyInterface() {
+        const hasFully = typeof window.fully !== 'undefined';
+        const hasStartApp = hasFully && typeof window.fully.startApplication === 'function';
+        let icon, title, msg;
+        if (!hasFully) {
+            icon = '❌';
+            title = 'JavaScript Interface Tidak Aktif';
+            msg = 'window.fully tidak terdeteksi sama sekali.\n\nKemungkinan penyebab:\n1. Perlu RESTART penuh aplikasi Fully Kiosk Browser (bukan cuma reload halaman) setelah mengaktifkan setting.\n2. Fitur ini butuh lisensi PLUS untuk benar-benar ter-inject.';
+        } else if (!hasStartApp) {
+            icon = '⚠️';
+            title = 'Fitur Dibatasi';
+            msg = 'window.fully terdeteksi, tapi startApplication() tidak ditemukan.\n\nKemungkinan versi Fully Kiosk Browser membatasi method ini tanpa lisensi PLUS.';
+        } else {
+            icon = '✅';
+            title = 'Interface Siap';
+            msg = 'window.fully.startApplication tersedia dan siap dipakai!\n\nJika app masih tidak terbuka saat ditekan:\n1. Package name salah / app tidak terpasang di tablet ini.\n2. Pembatasan OEM (Infinix/XOS) yang memblokir Fully Kiosk membuka app lain di background — cek izin Autostart & Battery Optimization.';
+        }
+        showMacAlert(title, msg, icon);
+    }
+
+    document.getElementById('checkFullyBtn').addEventListener('click', checkFullyInterface);
+
     function renderAppShortcuts() {
         const grid = document.getElementById('appShortcutGrid');
         if (!grid) return;
@@ -990,7 +1035,7 @@
         const iconValue = document.getElementById('appFormIconValue').value.trim();
 
         if (!label || !packageName) {
-            alert('Nama dan Package Name wajib diisi.');
+            showMacAlert('Data Belum Lengkap', 'Nama dan Package Name wajib diisi.', '⚠️');
             return;
         }
 
